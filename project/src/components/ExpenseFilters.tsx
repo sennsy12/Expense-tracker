@@ -30,15 +30,15 @@ export function ExpenseFilters({
   return (
     <div className="space-y-2">
       {/* Top Bar */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         {/* Search */}
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             placeholder="Search expenses..."
             value={filters.searchTerm}
             onChange={(e) => onUpdateFilters({ searchTerm: e.target.value })}
-            className="h-9 w-full rounded-md border bg-background px-8 text-sm"
+            className="h-9 w-full rounded-md border bg-background pl-9 pr-8 text-sm"
           />
           {filters.searchTerm && (
             <button
@@ -50,69 +50,62 @@ export function ExpenseFilters({
           )}
         </div>
 
-        {/* Sort */}
-        <div className="flex items-center gap-1.5 text-sm">
-          <select
-            value={sort.field}
-            onChange={(e) =>
-              onUpdateSort({
-                ...sort,
-                field: e.target.value as SortOption["field"],
-              })
-            }
-            className="h-9 rounded-md border bg-background px-2 text-sm"
-          >
-            <option value="date">Date</option>
-            <option value="amount">Amount</option>
-            <option value="category">Category</option>
-          </select>
+        {/* Sort and Filter Controls */}
+        <div className="flex gap-2 w-full sm:w-auto">
+          {/* Sort */}
+          <div className="flex items-center gap-1.5 text-sm flex-1 sm:flex-initial">
+            <select
+              value={sort.field}
+              onChange={(e) =>
+                onUpdateSort({
+                  ...sort,
+                  field: e.target.value as SortOption["field"],
+                })
+              }
+              className="h-9 w-full sm:w-auto rounded-md border bg-background px-2 text-sm"
+            >
+              <option value="date">Date</option>
+              <option value="amount">Amount</option>
+              <option value="category">Category</option>
+            </select>
+            <button
+              onClick={() =>
+                onUpdateSort({
+                  ...sort,
+                  direction: sort.direction === "asc" ? "desc" : "asc",
+                })
+              }
+              className="h-9 w-9 rounded-md border bg-background flex items-center justify-center hover:bg-accent"
+            >
+              {sort.direction === "asc" ? (
+                <SortAsc className="h-4 w-4" />
+              ) : (
+                <SortDesc className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+
+          {/* Filter Toggle */}
           <button
-            onClick={() =>
-              onUpdateSort({
-                ...sort,
-                direction: sort.direction === "asc" ? "desc" : "asc",
-              })
-            }
-            className="h-9 w-9 rounded-md border bg-background flex items-center justify-center hover:bg-accent"
-          >
-            {sort.direction === "asc" ? (
-              <SortAsc className="h-4 w-4" />
-            ) : (
-              <SortDesc className="h-4 w-4" />
+            onClick={() => setShowFilters(!showFilters)}
+            className={cn(
+              "h-9 rounded-md border px-3 flex items-center gap-1.5 hover:bg-accent flex-1 sm:flex-initial justify-center sm:justify-start",
+              hasActiveFilters && "border-primary text-primary"
             )}
+          >
+            <Filter className="h-4 w-4" />
+            <span className="text-sm">Filter</span>
+            <ChevronDown className={cn(
+              "h-4 w-4 transition-transform",
+              showFilters && "rotate-180"
+            )} />
           </button>
         </div>
-
-        {/* Filter Toggle */}
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className={cn(
-            "h-9 rounded-md border px-3 flex items-center gap-1.5 hover:bg-accent",
-            hasActiveFilters && "border-primary text-primary"
-          )}
-        >
-          <Filter className="h-4 w-4" />
-          <span className="text-sm">Filter</span>
-          <ChevronDown className={cn(
-            "h-4 w-4 transition-transform",
-            showFilters && "rotate-180"
-          )} />
-        </button>
-
-        {/* Reset */}
-        {hasActiveFilters && (
-          <button
-            onClick={onReset}
-            className="h-9 rounded-md border px-3 text-sm hover:bg-accent"
-          >
-            Reset
-          </button>
-        )}
       </div>
 
       {/* Filter Panel */}
       {showFilters && (
-        <div className="rounded-md border bg-background p-4 grid gap-4">
+        <div className="rounded-md border bg-background p-3 sm:p-4">
           {/* Categories */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Categories</label>
@@ -128,7 +121,7 @@ export function ExpenseFilters({
                     })
                   }
                   className={cn(
-                    "rounded-full px-2.5 py-0.5 text-xs transition-colors",
+                    "rounded-full px-2.5 py-1 text-xs transition-colors",
                     filters.categories.includes(category)
                       ? "bg-primary text-primary-foreground"
                       : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
@@ -140,7 +133,7 @@ export function ExpenseFilters({
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 mt-4">
             {/* Amount Range */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Amount Range</label>
@@ -160,7 +153,7 @@ export function ExpenseFilters({
                         },
                       })
                     }
-                    className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                    className="h-9 w-full rounded-md border bg-background px-3 text-sm"
                   />
                 </div>
                 <div className="flex-1">
@@ -178,7 +171,7 @@ export function ExpenseFilters({
                         },
                       })
                     }
-                    className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                    className="h-9 w-full rounded-md border bg-background px-3 text-sm"
                   />
                 </div>
               </div>
@@ -200,7 +193,7 @@ export function ExpenseFilters({
                         },
                       })
                     }
-                    className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                    className="h-9 w-full rounded-md border bg-background px-3 text-sm"
                   />
                 </div>
                 <div className="flex-1">
@@ -215,12 +208,22 @@ export function ExpenseFilters({
                         },
                       })
                     }
-                    className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                    className="h-9 w-full rounded-md border bg-background px-3 text-sm"
                   />
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Reset Button */}
+          {hasActiveFilters && (
+            <button
+              onClick={onReset}
+              className="mt-4 w-full sm:w-auto h-9 rounded-md border border-destructive bg-destructive/10 px-3 text-sm font-medium text-destructive hover:bg-destructive/20"
+            >
+              Reset Filters
+            </button>
+          )}
         </div>
       )}
     </div>

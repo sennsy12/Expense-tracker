@@ -1,4 +1,5 @@
 
+
 export function Footer() {
   return (
     <footer className="border-t py-6 md:py-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

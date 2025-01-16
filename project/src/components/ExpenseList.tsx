@@ -7,7 +7,7 @@ import {
 import { useExpenseStore } from "../lib/store"
 import { formatCurrency, formatDate } from "../lib/utils/utils"
 import { type ExpenseWithId } from "../lib/types"
-import { Download } from "lucide-react"
+import { Download, Trash2, Pencil } from "lucide-react"
 import * as XLSX from 'xlsx'
 import {
   DropdownMenu,
@@ -17,27 +17,9 @@ import {
 } from "../components/ui/dropdown-menu"
 import { useExpenseFilters } from "../hooks/useExpenseFilters"
 import { ExpenseFilters } from "./ExpenseFilters"
-
-const columns = [
-  {
-    accessorKey: "date",
-    header: "Date",
-    cell: ({ row }: { row: Row<ExpenseWithId> }) => formatDate(row.original.date),
-  },
-  {
-    accessorKey: "category",
-    header: "Category",
-  },
-  {
-    accessorKey: "description",
-    header: "Description",
-  },
-  {
-    accessorKey: "amount",
-    header: "Amount",
-    cell: ({ row }: { row: Row<ExpenseWithId> }) => formatCurrency(row.original.amount),
-  },
-]
+import { toast } from "sonner"
+import { useState } from "react"
+import { ExpenseEditModal } from "./ExpenseEditModal"
 
 export function ExpenseList() {
   const expenses = useExpenseStore((state) => state.expenses)
@@ -49,6 +31,57 @@ export function ExpenseList() {
     setSort,
     resetFilters,
   } = useExpenseFilters(expenses)
+
+  const [editingExpense, setEditingExpense] = useState<ExpenseWithId | null>(null)
+
+  const columns = [
+    {
+      accessorKey: "date",
+      header: "Date",
+      cell: ({ row }: { row: Row<ExpenseWithId> }) => formatDate(row.original.date),
+    },
+    {
+      accessorKey: "category",
+      header: "Category",
+    },
+    {
+      accessorKey: "description",
+      header: "Description",
+      cell: ({ row }: { row: Row<ExpenseWithId> }) => (
+        <div className="max-w-[180px] whitespace-pre-wrap break-words">
+          {row.original.description}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "amount",
+      header: "Amount",
+      cell: ({ row }: { row: Row<ExpenseWithId> }) => formatCurrency(row.original.amount),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }: { row: Row<ExpenseWithId> }) => (
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              useExpenseStore.getState().removeExpense(row.original.id)
+              toast.success("Expense deleted")
+            }}
+            className="p-2 hover:bg-gray-100 rounded-full dark:hover:bg-gray-800"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setEditingExpense(row.original)}
+            className="p-2 hover:bg-gray-100 rounded-full dark:hover:bg-gray-800"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+        </div>
+      ),
+    },
+  ]
 
   const downloadExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
@@ -94,8 +127,8 @@ export function ExpenseList() {
         onReset={resetFilters}
       />
       
-      <div className="rounded-md border">
-        <div className="flex justify-between items-center p-4 border-b">
+      <div className="rounded-md border overflow-hidden">
+        <div className="flex justify-between items-center p-3 sm:p-4 border-b">
           <h3 className="text-sm font-medium">
             Expense List ({filteredExpenses.length} items)
           </h3>
@@ -118,47 +151,56 @@ export function ExpenseList() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <table className="w-full">
-          <thead>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    className="border-b px-4 py-2 text-left text-sm font-medium text-muted-foreground"
-                  >
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody>
-            {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} className="border-b last:border-0">
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-4 py-2 text-sm">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
-              </tr>
-            ))}
-            {table.getRowModel().rows.length === 0 && (
-              <tr>
-                <td
-                  colSpan={columns.length}
-                  className="px-4 py-8 text-center text-sm text-muted-foreground"
-                >
-                  No expenses found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px]">
+            <thead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <th
+                      key={header.id}
+                      style={{ width: header.getSize() }}
+                      className="border-b px-2 py-2 text-left text-sm font-medium text-muted-foreground sm:px-3"
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </th>
+                  ))}
+                </tr>
+              ))}
+            </thead>
+            <tbody>
+              {table.getRowModel().rows.map((row) => (
+                <tr key={row.id} className="border-b last:border-none hover:bg-muted/50">
+                  {row.getVisibleCells().map((cell) => (
+                    <td
+                      key={cell.id}
+                      className="px-2 py-2 text-sm sm:px-3"
+                    >
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {editingExpense && (
+        <ExpenseEditModal
+          expense={editingExpense}
+          isOpen={true}
+          onClose={() => setEditingExpense(null)}
+        />
+      )}
     </div>
   )
 } 
