@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom"
-import { Home, DollarSign, PiggyBank, Menu, Target } from "lucide-react"
+import { Home, DollarSign, PiggyBank, Menu, Target, BarChart } from "lucide-react"
 import { useState } from "react"
 
 export function Navbar() {
@@ -12,6 +12,7 @@ export function Navbar() {
     { to: "/converter", icon: <DollarSign className="h-5 w-5" />, label: "Converter" },
     { to: "/budget", icon: <PiggyBank className="h-5 w-5" />, label: "Budget" },
     { to: "/goals", icon: <Target className="h-5 w-5" />, label: "Goals" },
+    { to: "/net-worth", icon: <BarChart className="h-5 w-5" />, label: "Net Worth" },
   ]
 
   return (

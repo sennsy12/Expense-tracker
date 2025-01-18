@@ -7,6 +7,7 @@ import ConverterPage from "./pages/converter/page"
 import BudgetPage from "./pages/budget/page"
 import LandingPage from "./pages/landing/page"
 import GoalsPage from "./pages/goals/page"
+import NetWorthPage from "./pages/net-worth/NetWorthPage"
 import { Footer } from "./components/layout/Footer"
 import { Toaster } from 'sonner'
 
@@ -25,6 +26,7 @@ export default function App() {
               <Route path="/converter" element={<ConverterPage />} />
               <Route path="/budget" element={<BudgetPage />} />
               <Route path="/goals" element={<GoalsPage />} />
+              <Route path="/net-worth" element={<NetWorthPage />} />
             </Routes>
             <Footer />
             <Toaster richColors position="top-right" />
