@@ -1,88 +1,128 @@
-import { useState, useMemo } from "react"
-import { CalendarIcon, Coins, Plus, ArrowUp, ArrowDown } from "lucide-react"
-import { cn, formatCurrency } from "../../lib/utils/utils"
-import { useNetWorthStore } from "../../hooks/useNetWorthStore"
-import { toast } from "sonner"
+import React, { useState, useMemo, useCallback } from 'react';
+import {
+  CalendarIcon,
+  Coins,
+  Plus,
+  ArrowUp,
+  ArrowDown,
+} from 'lucide-react';
+import { cn, formatCurrency } from '../../lib/utils/utils';
+import { useNetWorthStore } from '../../hooks/useNetWorthStore';
+import { toast } from 'sonner';
 
 export function NetWorthInputForm() {
-  const { assets, addAsset, addNetWorthEntry, netWorthEntries } = useNetWorthStore()
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
-  const [selectedAsset, setSelectedAsset] = useState("")
-  const [action, setAction] = useState<"add" | "subtract">("add")
-  const [value, setValue] = useState("")
-  const [newAssetName, setNewAssetName] = useState("")
-  const [newAssetType, setNewAssetType] = useState<"asset" | "liability">("asset")
-  const [showNewAssetForm, setShowNewAssetForm] = useState(false)
+  const { assets, addAsset, addNetWorthEntry, netWorthEntries } =
+    useNetWorthStore();
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedAsset, setSelectedAsset] = useState('');
+  const [action, setAction] = useState<'add' | 'subtract'>('add');
+  const [value, setValue] = useState('');
+  const [newAssetName, setNewAssetName] = useState('');
+  const [newAssetType, setNewAssetType] = useState<'asset' | 'liability'>('asset');
+  const [showNewAssetForm, setShowNewAssetForm] = useState(false);
 
-  const currentTotals = useMemo(() => {
-    const sortedEntries = [...netWorthEntries].sort((a, b) => 
-      new Date(b.date).getTime() - new Date(a.date).getTime()
-    )
 
-    let totalAssets = 0
-    let totalLiabilities = 0
 
-    // Calculate totals from entries
-    sortedEntries.forEach(entry => {
-      if (entry.type === "asset") {
-        if (entry.action === "add") {
-          totalAssets += entry.value
+   const currentTotals = useMemo(() => {
+    const sortedEntries = [...netWorthEntries].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+    );
+
+    let totalAssets = 0;
+    let totalLiabilities = 0;
+
+    sortedEntries.forEach((entry) => {
+      if (entry.type === 'asset') {
+        if (entry.action === 'add') {
+          totalAssets += entry.value;
         } else {
-          totalAssets -= entry.value
+          totalAssets -= entry.value;
         }
       } else {
-        if (entry.action === "add") {
-          totalLiabilities += entry.value
+        if (entry.action === 'add') {
+          totalLiabilities += entry.value;
         } else {
-          totalLiabilities -= entry.value
+          totalLiabilities -= entry.value;
         }
       }
-    })
+    });
 
     return {
       totalAssets: Math.max(0, totalAssets),
       totalLiabilities: Math.max(0, totalLiabilities),
-      netWorth: totalAssets - totalLiabilities
-    }
-  }, [netWorthEntries])
+      netWorth: totalAssets - totalLiabilities,
+    };
+  }, [netWorthEntries]);
 
-  const handleAddAsset = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newAssetName.trim()) return
+  // Input Callbacks to minimize rerenders
+
+  const handleDateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setDate(e.target.value);
+    }, []);
+
+    const handleAssetChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+      setSelectedAsset(e.target.value);
+    }, []);
+
+
+    const handleActionChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+        setAction(e.target.value as 'add' | 'subtract');
+    }, []);
+    
+    const handleValueChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setValue(e.target.value);
+      }, []);
+
+    const handleNewAssetNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+          setNewAssetName(e.target.value);
+    }, []);
+
+    const handleNewAssetTypeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+        setNewAssetType(e.target.value as 'asset' | 'liability');
+    }, []);
+
+
+  const handleAddAsset = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAssetName.trim()) return;
 
     addAsset({
       name: newAssetName.trim(),
       type: newAssetType,
-      value: 0
-    })
+      value: 0,
+    });
 
-    setNewAssetName("")
-    setShowNewAssetForm(false)
-  }
+    setNewAssetName('');
+    setShowNewAssetForm(false);
+  }, [addAsset, newAssetName, newAssetType, setNewAssetName, setShowNewAssetForm]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedAsset || !value) return
 
-    const numericValue = parseFloat(value)
-    if (isNaN(numericValue) || numericValue <= 0) {
-      toast.error("Please enter a valid positive number")
-      return
-    }
-
-    addNetWorthEntry({
-      date,
-      assetName: selectedAsset,
-      type: assets.find(a => a.name === selectedAsset)?.type || "asset",
-      action,
-      value: numericValue,
-      netWorth: 0 
-    })
-
-    setSelectedAsset("")
-    setValue("")
-    setAction("add")
-  }
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+      e.preventDefault();
+      if (!selectedAsset || !value) {
+            toast.error('Please select an asset and enter a value');
+            return;
+        }
+    
+        const numericValue = parseFloat(value);
+        if (isNaN(numericValue) || numericValue <= 0) {
+          toast.error('Please enter a valid positive number');
+          return;
+        }
+    
+        addNetWorthEntry({
+          date,
+          assetName: selectedAsset,
+          type: assets.find((a) => a.name === selectedAsset)?.type || 'asset',
+          action,
+          value: numericValue,
+          netWorth: 0,
+        });
+    
+        setSelectedAsset('');
+        setValue('');
+        setAction('add');
+    }, [addNetWorthEntry, selectedAsset, value, assets, date, action]);
 
   return (
     <div className="rounded-xl sm:rounded-2xl border bg-gradient-to-b from-card to-card/50 shadow-xl">
@@ -93,13 +133,19 @@ export function NetWorthInputForm() {
             <Coins className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           </div>
           <div>
-            <h3 className="text-base sm:text-lg font-bold tracking-tight">Net Worth Tracker</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Record changes to your assets and liabilities</p>
+            <h3 className="text-base sm:text-lg font-bold tracking-tight">
+              Net Worth Tracker
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Record changes to your assets and liabilities
+            </p>
           </div>
         </div>
         <div className="w-full sm:w-auto flex gap-2">
           <div className="flex-1 sm:flex-initial p-2.5 rounded-lg bg-card/50 backdrop-blur border shadow-sm">
-            <p className="text-xs font-medium text-muted-foreground">Current Net Worth</p>
+            <p className="text-xs font-medium text-muted-foreground">
+              Current Net Worth
+            </p>
             <p className="text-lg sm:text-xl font-bold tracking-tight text-primary mt-0.5">
               {formatCurrency(currentTotals.netWorth)}
             </p>
@@ -111,7 +157,9 @@ export function NetWorthInputForm() {
         {/* Asset Management Section */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-foreground/80">Asset Management</h4>
+            <h4 className="text-sm font-semibold text-foreground/80">
+              Asset Management
+            </h4>
             <button
               type="button"
               onClick={() => setShowNewAssetForm(!showNewAssetForm)}
@@ -128,14 +176,14 @@ export function NetWorthInputForm() {
                 <input
                   type="text"
                   placeholder="Asset Name"
-                  value={newAssetName}
-                  onChange={(e) => setNewAssetName(e.target.value)}
+                    value={newAssetName}
+                  onChange={handleNewAssetNameChange}
                   className="flex-1 h-8 rounded-md border bg-background px-2.5 text-sm"
                   required
                 />
                 <select
                   value={newAssetType}
-                  onChange={(e) => setNewAssetType(e.target.value as "asset" | "liability")}
+                    onChange={handleNewAssetTypeChange}
                   className="w-32 h-8 rounded-md border bg-background px-2.5 text-sm"
                 >
                   <option value="asset">Asset</option>
@@ -163,43 +211,64 @@ export function NetWorthInputForm() {
 
         {/* Record Change Form */}
         <div className="space-y-3">
-          <h4 className="text-sm font-semibold text-foreground/80">Record Change</h4>
+          <h4 className="text-sm font-semibold text-foreground/80">
+            Record Change
+          </h4>
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-foreground/70">Date</label>
-                <div className="relative mt-1" onClick={() => (document.getElementById('date-input') as HTMLInputElement)?.showPicker()}>
+                <label className="text-xs font-medium text-foreground/70">
+                  Date
+                </label>
+                <div
+                  className="relative mt-1"
+                  onClick={() =>
+                    (
+                      document.getElementById('date-input') as HTMLInputElement
+                    )?.showPicker()
+                  }
+                >
                   <CalendarIcon className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                   <input
                     id="date-input"
                     type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
+                      value={date}
+                      onChange={handleDateChange}
                     className={cn(
-                      "w-full h-8 rounded-md border bg-background pl-8 pr-2.5 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary cursor-pointer"
+                      'w-full h-8 rounded-md border bg-background pl-8 pr-2.5 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary cursor-pointer',
                     )}
                     required
                   />
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-foreground/70">Asset/Liability</label>
+                <label className="text-xs font-medium text-foreground/70">
+                  Asset/Liability
+                </label>
                 <select
                   value={selectedAsset}
-                  onChange={(e) => setSelectedAsset(e.target.value)}
+                 onChange={handleAssetChange}
                   className="w-full h-8 mt-1 rounded-md border bg-background px-2.5 text-sm"
                   required
                 >
                   <option value="">Select Asset</option>
                   <optgroup label="Assets">
-                    {assets.filter(a => a.type === "asset").map(asset => (
-                      <option key={asset.id} value={asset.name}>{asset.name}</option>
-                    ))}
+                    {assets
+                      .filter((a) => a.type === 'asset')
+                      .map((asset) => (
+                        <option key={asset.id} value={asset.name}>
+                          {asset.name}
+                        </option>
+                      ))}
                   </optgroup>
                   <optgroup label="Liabilities">
-                    {assets.filter(a => a.type === "liability").map(asset => (
-                      <option key={asset.id} value={asset.name}>{asset.name}</option>
-                    ))}
+                    {assets
+                      .filter((a) => a.type === 'liability')
+                      .map((asset) => (
+                        <option key={asset.id} value={asset.name}>
+                          {asset.name}
+                        </option>
+                      ))}
                   </optgroup>
                 </select>
               </div>
@@ -207,10 +276,12 @@ export function NetWorthInputForm() {
 
             <div className="flex gap-2">
               <div className="w-32">
-                <label className="text-xs font-medium text-foreground/70">Action</label>
+                <label className="text-xs font-medium text-foreground/70">
+                  Action
+                </label>
                 <select
-                  value={action}
-                  onChange={(e) => setAction(e.target.value as "add" | "subtract")}
+                    value={action}
+                 onChange={handleActionChange}
                   className="w-full h-8 mt-1 rounded-md border bg-background px-2.5 text-sm"
                   required
                 >
@@ -219,12 +290,14 @@ export function NetWorthInputForm() {
                 </select>
               </div>
               <div className="flex-1">
-                <label className="text-xs font-medium text-foreground/70">Value</label>
+                <label className="text-xs font-medium text-foreground/70">
+                  Value
+                </label>
                 <input
                   type="number"
                   placeholder="Enter amount"
-                  value={value}
-                  onChange={(e) => setValue(e.target.value)}
+                    value={value}
+                    onChange={handleValueChange}
                   className="w-full h-8 mt-1 rounded-md border bg-background px-2.5 text-sm"
                   required
                 />
@@ -247,7 +320,9 @@ export function NetWorthInputForm() {
           <div className="p-2.5 rounded-lg bg-card/50 backdrop-blur border shadow-sm">
             <div className="flex items-center gap-1.5">
               <ArrowUp className="h-3 w-3 text-emerald-500" />
-              <p className="text-xs font-medium text-muted-foreground">Total Assets</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                Total Assets
+              </p>
             </div>
             <p className="text-sm font-semibold text-emerald-500 mt-1">
               {formatCurrency(currentTotals.totalAssets)}
@@ -256,7 +331,9 @@ export function NetWorthInputForm() {
           <div className="p-2.5 rounded-lg bg-card/50 backdrop-blur border shadow-sm">
             <div className="flex items-center gap-1.5">
               <ArrowDown className="h-3 w-3 text-red-500" />
-              <p className="text-xs font-medium text-muted-foreground">Total Liabilities</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                Total Liabilities
+              </p>
             </div>
             <p className="text-sm font-semibold text-red-500 mt-1">
               {formatCurrency(currentTotals.totalLiabilities)}
@@ -265,7 +342,9 @@ export function NetWorthInputForm() {
           <div className="col-span-2 sm:col-span-1 p-2.5 rounded-lg bg-card/50 backdrop-blur border shadow-sm">
             <div className="flex items-center gap-1.5">
               <Coins className="h-3 w-3 text-primary" />
-              <p className="text-xs font-medium text-muted-foreground">Net Worth</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                Net Worth
+              </p>
             </div>
             <p className="text-sm font-semibold text-primary mt-1">
               {formatCurrency(currentTotals.netWorth)}
@@ -274,5 +353,5 @@ export function NetWorthInputForm() {
         </div>
       </div>
     </div>
-  )
+  );
 }
