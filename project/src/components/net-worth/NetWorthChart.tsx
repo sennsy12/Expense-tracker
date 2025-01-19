@@ -56,7 +56,7 @@ export function NetWorthChart() {
     datasets: chartType === "stacked" ? [
       {
         label: 'Assets',
-        data: sortedEntries.map(entry => entry.totalAssets),
+        data: sortedEntries.map(entry => entry.netWorth > 0 ? entry.netWorth : 0),
         fill: true,
         backgroundColor: 'rgba(34, 197, 94, 0.5)',
         borderColor: '#22c55e',
@@ -66,7 +66,7 @@ export function NetWorthChart() {
       },
       {
         label: 'Liabilities',
-        data: sortedEntries.map(entry => entry.totalLiabilities),
+        data: sortedEntries.map(entry => entry.netWorth < 0 ? Math.abs(entry.netWorth) : 0),
         fill: true,
         backgroundColor: 'rgba(239, 68, 68, 0.5)',
         borderColor: '#ef4444',

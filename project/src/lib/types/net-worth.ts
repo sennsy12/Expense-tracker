@@ -1,21 +1,16 @@
+export interface Asset {
+  id: string
+  name: string
+  type: "asset" | "liability"
+  value: number
+}
+
 export interface NetWorthEntry {
-    id: string
-    date: string
-    assets: Asset[]
-    liabilities: Liability[]
-    totalAssets: number
-    totalLiabilities: number
-    netWorth: number
-  }
-  
-  export interface Asset {
-    id: string
-    name: string
-    value: number
-  }
-  
-  export interface Liability {
-    id: string
-    name: string
-    value: number
-  }
+  id: string
+  date: string
+  assetName: string
+  type: "asset" | "liability"
+  action: "add" | "subtract"
+  value: number
+  netWorth: number
+}

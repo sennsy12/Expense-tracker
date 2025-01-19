@@ -1,8 +1,9 @@
-import { useState, useMemo, useEffect } from "react"
-import { CalendarIcon, X, Trash2 } from "lucide-react"
-import { cn, formatCurrency } from "../../lib/utils/utils"
+import { useState, useEffect } from "react"
+import { CalendarIcon, X } from "lucide-react"
+import { cn } from "../../lib/utils/utils"
 import { useNetWorthStore } from "../../hooks/useNetWorthStore"
-import { Asset, Liability, NetWorthEntry } from "../../lib/types/net-worth" 
+import { NetWorthEntry } from "../../lib/types/net-worth"
+import { toast } from "sonner"
 
 interface NetWorthEditModalProps {
   isOpen: boolean
@@ -10,210 +11,136 @@ interface NetWorthEditModalProps {
   entry: NetWorthEntry | null
 }
 
-const initialAsset: Asset = { id: crypto.randomUUID(), name: "", value: 0 } 
-const initialLiability: Liability = { id: crypto.randomUUID(), name: "", value: 0 }
-
 export function NetWorthEditModal({ isOpen, onClose, entry }: NetWorthEditModalProps) {
-  const updateNetWorthEntry = useNetWorthStore((state) => state.updateNetWorthEntry)
-  const [date, setDate] = useState(entry?.date || new Date().toISOString().split('T')[0])
-  const [assets, setAssets] = useState<Asset[]>(entry?.assets || [initialAsset]) 
-  const [liabilities, setLiabilities] = useState<Liability[]>(entry?.liabilities || [initialLiability]) 
+  const { assets, removeNetWorthEntry, addNetWorthEntry } = useNetWorthStore()
+  const [date, setDate] = useState("")
+  const [selectedAsset, setSelectedAsset] = useState("")
+  const [action, setAction] = useState<"add" | "subtract">("add")
+  const [value, setValue] = useState("")
 
   useEffect(() => {
     if (entry) {
       setDate(entry.date)
-      setAssets(entry.assets)
-      setLiabilities(entry.liabilities)
+      setSelectedAsset(entry.assetName)
+      setAction(entry.action)
+      setValue(entry.value.toString())
     }
   }, [entry])
 
-  const totalAssets = useMemo(() => {
-    return assets.reduce((sum, asset) => sum + asset.value, 0)
-  }, [assets])
-
-  const totalLiabilities = useMemo(() => {
-    return liabilities.reduce((sum, liability) => sum + liability.value, 0)
-  }, [liabilities])
-
-  const netWorth = useMemo(() => totalAssets - totalLiabilities, [totalAssets, totalLiabilities])
-
-  if (!isOpen || !entry) return null
-
-  const resetForm = () => {
-    setDate(new Date().toISOString().split('T')[0])
-    setAssets([initialAsset])
-    setLiabilities([initialLiability])
-  }
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (assets.some(asset => !asset.name || !asset.value) || liabilities.some(liability => !liability.name || !liability.value)) {
-      return;
+    if (!entry || !selectedAsset || !value) return
+
+    const numericValue = parseFloat(value)
+    if (isNaN(numericValue) || numericValue <= 0) {
+      toast.error("Please enter a valid positive number")
+      return
     }
-    updateNetWorthEntry({
-      ...entry,
+
+ 
+    removeNetWorthEntry(entry.id)
+    addNetWorthEntry({
       date,
-      assets: assets.map(a => ({ ...a, value: parseFloat(a.value?.toString() || "0") })),
-      liabilities: liabilities.map(l => ({ ...l, value: parseFloat(l.value?.toString() || "0") })),
-      totalAssets,
-      totalLiabilities,
-      netWorth,
+      assetName: selectedAsset,
+      type: assets.find(a => a.name === selectedAsset)?.type || "asset",
+      action,
+      value: numericValue,
+      netWorth: 0 
     })
-    resetForm()
+
     onClose()
   }
 
-  const addAssetField = () => {
-    setAssets([...assets, { ...initialAsset, id: crypto.randomUUID() }])
-  }
-
-  const removeAssetField = (id: string) => {
-    setAssets(assets.filter(asset => asset.id !== id))
-  }
-
-  const updateAssetField = (index: number, field: "name" | "value", value: string) => {
-    const newAssets = [...assets]
-    if (field === "value") {
-      newAssets[index] = { ...newAssets[index], value: parseFloat(value) }
-    } else {
-      newAssets[index] = { ...newAssets[index], name: value }
-    }
-    setAssets(newAssets)
-  }
-
-  const addLiabilityField = () => {
-    setLiabilities([...liabilities, { ...initialLiability, id: crypto.randomUUID() }])
-  }
-
-  const removeLiabilityField = (id: string) => {
-    setLiabilities(liabilities.filter(liability => liability.id !== id))
-  }
-
-  const updateLiabilityField = (index: number, field: "name" | "value", value: string) => {
-    const newLiabilities = [...liabilities]
-    if (field === "value") {
-      newLiabilities[index] = { ...newLiabilities[index], value: parseFloat(value) }
-    } else {
-      newLiabilities[index] = { ...newLiabilities[index], name: value }
-    }
-    setLiabilities(newLiabilities)
-  }
+  if (!isOpen || !entry) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-background rounded-lg p-4 w-full max-w-xl max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Edit Net Worth</h2>
-          <button onClick={onClose} className="rounded-md p-1 text-muted-foreground hover:bg-muted/20">
-            <X className="h-4 w-4" />
-          </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+      <div className="relative w-full max-w-md bg-background rounded-lg shadow-lg">
+        <button 
+          onClick={onClose}
+          className="absolute right-4 top-4 p-1 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        <div className="p-6">
+          <h2 className="text-lg font-semibold mb-4">Edit Entry</h2>
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="text-xs sm:text-sm font-semibold text-foreground/70">Date</label>
+              <div className="relative mt-1.5" onClick={() => (document.getElementById('edit-date-input') as HTMLInputElement)?.showPicker()}>
+                <CalendarIcon className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                <input
+                  id="edit-date-input"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className={cn(
+                    "w-full h-8 sm:h-9 rounded-md border-0 bg-muted/50 pl-8 pr-2.5 text-sm shadow-sm ring-1 ring-border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
+                  )}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <select
+                  value={action}
+                  onChange={(e) => setAction(e.target.value as "add" | "subtract")}
+                  className="w-32 h-8 sm:h-9 rounded-md border-0 bg-muted/50 px-2 text-sm"
+                  required
+                >
+                  <option value="add">Add</option>
+                  <option value="subtract">Subtract</option>
+                </select>
+                <select
+                  value={selectedAsset}
+                  onChange={(e) => setSelectedAsset(e.target.value)}
+                  className="flex-1 h-8 sm:h-9 rounded-md border-0 bg-muted/50 px-2 text-sm"
+                  required
+                >
+                  <option value="">Select Asset</option>
+                  <optgroup label="Assets">
+                    {assets.filter(a => a.type === "asset").map(asset => (
+                      <option key={asset.id} value={asset.name}>{asset.name}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Liabilities">
+                    {assets.filter(a => a.type === "liability").map(asset => (
+                      <option key={asset.id} value={asset.name}>{asset.name}</option>
+                    ))}
+                  </optgroup>
+                </select>
+                <input
+                  type="number"
+                  placeholder="Value"
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  className="w-28 h-8 sm:h-9 rounded-md border-0 bg-muted/50 px-2 text-sm"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-md border bg-card hover:bg-muted/50 text-xs font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-medium transition-colors"
+              >
+                Save Changes
+              </button>
+            </div>
+          </form>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-muted-foreground">Date</label>
-            <div className="relative mt-1.5">
-              <CalendarIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className={cn(
-                  "w-full h-10 rounded-md border-0 bg-muted pl-9 pr-3 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-                )}
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <h4 className="text-sm font-semibold text-muted-foreground mb-2">Assets</h4>
-            <div className="space-y-2">
-              {assets.map((asset, index) => (
-                <div key={asset.id} className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                  <input
-                    type="text"
-                    placeholder="Asset name"
-                    value={asset.name}
-                    onChange={(e) => updateAssetField(index, "name", e.target.value)}
-                    className="flex-1 h-10 rounded-md border-0 bg-muted px-3 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-                    required
-                  />
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      placeholder="Value"
-                      value={asset.value}
-                      onChange={(e) => updateAssetField(index, "value", e.target.value)}
-                      className="w-full sm:w-32 h-10 rounded-md border-0 bg-muted px-3 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-                      required
-                    />
-                    {assets.length > 1 && (
-                      <button type="button" onClick={() => removeAssetField(asset.id)} className="text-destructive">
-                        <Trash2 className="h-5 w-5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-              <button type="button" onClick={addAssetField} className="text-sm text-primary">+ Add Asset</button>
-            </div>
-          </div>
-
-          <div>
-            <h4 className="text-sm font-semibold text-muted-foreground mb-2">Liabilities</h4>
-            <div className="space-y-2">
-              {liabilities.map((liability, index) => (
-                <div key={liability.id} className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                  <input
-                    type="text"
-                    placeholder="Liability name"
-                    value={liability.name}
-                    onChange={(e) => updateLiabilityField(index, "name", e.target.value)}
-                    className="flex-1 h-10 rounded-md border-0 bg-muted px-3 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-                    required
-                  />
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      placeholder="Value"
-                      value={liability.value}
-                      onChange={(e) => updateLiabilityField(index, "value", e.target.value)}
-                      className="w-full sm:w-32 h-10 rounded-md border-0 bg-muted px-3 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-                      required
-                    />
-                    {liabilities.length > 1 && (
-                      <button type="button" onClick={() => removeLiabilityField(liability.id)} className="text-destructive">
-                        <Trash2 className="h-5 w-5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-              <button type="button" onClick={addLiabilityField} className="text-sm text-primary">+ Add Liability</button>
-            </div>
-          </div>
-
-          <div className="flex justify-between font-semibold">
-            <div>Net Worth:</div>
-            <div>{formatCurrency(netWorth)}</div>
-          </div>
-
-          <div className="flex justify-end gap-2 mt-6">
-            <button
-              type="button"
-              onClick={resetForm}
-              className="px-4 py-2 rounded-md bg-muted text-muted-foreground hover:bg-muted/80 text-sm font-medium"
-            >
-              Reset
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium"
-            >
-              Update Entry
-            </button>
-          </div>
-        </form>
       </div>
     </div>
   )
